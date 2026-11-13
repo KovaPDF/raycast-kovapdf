@@ -19,11 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This licence covers the source code of this extension only. The KovaPDF
-name, the logo and the icon in assets/ (copied from the KovaPDF website), and
-the KovaPDF website's images, fonts and text are not covered by it and are not
-licensed for reuse. Anyone forking this code must replace assets/icon.png
-with their own 512 by 512 icon.

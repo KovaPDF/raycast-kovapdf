@@ -1,0 +1,12 @@
+KovaPDF
+
+The MIT License in LICENSE covers the source code of this extension only.
+
+It does not cover the KovaPDF name, the logo, the icon in assets/ (assets/icon.png,
+copied from the KovaPDF website) or any other artwork, or the KovaPDF website's
+images, fonts and text. These are not licensed for reuse.
+
+Anyone forking this code must replace assets/icon.png with their own 512 by 512 icon.
+
+Using this extension calls the KovaPDF service, under its terms (https://www.kovapdf.com/legal/terms)
+and privacy policy (https://www.kovapdf.com/legal/privacy).
