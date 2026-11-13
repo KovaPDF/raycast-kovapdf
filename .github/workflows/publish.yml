@@ -1,0 +1,33 @@
+name: publish
+
+# A Raycast extension is not published to npm: it is submitted to the Raycast
+# Store as a pull request to github.com/raycast/extensions, with `npx ray
+# publish` run by the owner (it signs in to Raycast and GitHub
+# interactively). This manual workflow only checks that the extension is
+# ready and keeps the built files as an artifact. It submits nothing.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ready:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: The SDK dependency must come from npm, not a local folder
+        run: node -e "const d=require('./package.json').dependencies['@kovapdf/sdk']; if(!/^\d+\.\d+\.\d+$/.test(d)){console.error('Set @kovapdf/sdk to a published version first, not '+d);process.exit(1)}"
+      - run: npm test
+      - run: npm run lint
+      - run: npx ray build -e dist -o dist -I
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: raycast-kovapdf
+          path: dist/
