@@ -79,7 +79,7 @@
     }
   ],
   "dependencies": {
-    "@kovapdf/sdk": "file:../sdk-js",
+    "@kovapdf/sdk": "0.1.0",
     "@raycast/api": "2.10.1"
   },
   "devDependencies": {
