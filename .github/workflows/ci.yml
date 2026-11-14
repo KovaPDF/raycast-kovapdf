@@ -20,9 +20,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      # ray build also writes raycast-env.d.ts (the generated Preferences types), which typecheck and the tests read.
+      # Tests first, on a fresh checkout: they compile only logic.ts, client.ts and the tests, so they need no generated files.
+      - run: npm test
+      # ray build writes raycast-env.d.ts (the generated Preferences types), which typecheck reads.
       - run: npm run build
       - run: npm run typecheck
-      - run: npm test
       # ray lint checks the author against the Raycast Store (network); ESLint and Prettier run in it too.
       - run: npm run lint
