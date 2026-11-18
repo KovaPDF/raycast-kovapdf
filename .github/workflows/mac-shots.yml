@@ -31,7 +31,9 @@ jobs:
         timeout-minutes: 8
         continue-on-error: true
         run: |
-          brew install --cask raycast
+          displayplacer "id:1 res:1920x1080 hz:60 color_depth:7 scaling:off origin:(0,0) degree:0" || true
+          brew install --cask --no-quarantine raycast || brew install --cask raycast
+          xattr -dr com.apple.quarantine /Applications/Raycast.app || true
           (open /Applications/Raycast.app > open.log 2>&1 &) ; sleep 5; cat open.log || true
           sleep 25
           screencapture -x shots/01-after-open.png || true
