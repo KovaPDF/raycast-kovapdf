@@ -1,0 +1,50 @@
+name: mac-shots
+
+# Experiment: can a GitHub macOS runner open Raycast and show our extension,
+# so the Store screenshots can come from a real Raycast window?
+on:
+  push:
+    branches: [mac-shots]
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Screen size and permissions
+        run: |
+          system_profiler SPDisplaysDataType | grep -i -E 'resolution|display' || true
+          mkdir -p shots
+          screencapture -x shots/00-desktop.png || echo "screencapture failed"
+      - name: Install and open Raycast
+        run: |
+          brew install --cask raycast
+          open -a Raycast
+          sleep 25
+          screencapture -x shots/01-after-open.png || true
+          osascript -e 'tell application "System Events" to get name of every window of process "Raycast"' || true
+      - name: Load the extension in development mode
+        run: |
+          (npx ray develop > ray-develop.log 2>&1 &) ; sleep 60
+          tail -40 ray-develop.log || true
+          screencapture -x shots/02-after-develop.png || true
+          open "raycast://extensions/kovapdf/kovapdf/verify-signature" || true
+          sleep 10
+          screencapture -x shots/03-verify-deeplink.png || true
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: mac-shots
+          path: |
+            shots/
+            ray-develop.log
+          retention-days: 3
