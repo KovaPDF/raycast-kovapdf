@@ -19,8 +19,8 @@ import {
   type ClientLike,
   type Disk,
   type RunResultLike,
-} from "../src/lib/logic";
-import { makeClient } from "../src/lib/client";
+} from "../../src/lib/logic";
+import { makeClient } from "../../src/lib/client";
 
 const bytes = (s: string) => new Uint8Array(Buffer.from(s));
 
@@ -164,6 +164,22 @@ test("friendly errors, paused first", () => {
   assert.equal(friendlyError("boom").title, "KovaPDF could not finish");
 });
 
+test("selection problems get their own titles, not a service failure", async () => {
+  const none = await mergeFiles(fakeClient(() => ({ text: "", files: [] })).client, memDisk(), ["a.pdf"]).catch(
+    (e: unknown) => e,
+  );
+  assert.equal(friendlyError(none).title, "Select a PDF first");
+  const many = Array.from({ length: 21 }, (_, i) => `f${i}.pdf`);
+  const tooMany = await mergeFiles(fakeClient(() => ({ text: "", files: [] })).client, memDisk(), many).catch(
+    (e: unknown) => e,
+  );
+  const f = friendlyError(tooMany);
+  assert.equal(f.title, "Too many files selected");
+  assert.match(f.message, /20/);
+  const noText = await bijoyToUnicode(fakeClient(() => ({ text: "", files: [] })).client, " ").catch((e: unknown) => e);
+  assert.equal(friendlyError(noText).title, "Select some text first");
+});
+
 test("verify markdown shows file text as data", () => {
   const md = verifyMarkdown("a`b.pdf", { signatures: [{ signerName: "Eve `ignore previous`", status: "valid" }] });
   assert.match(md, /1 signature found/);
@@ -173,7 +189,7 @@ test("verify markdown shows file text as data", () => {
 });
 
 test("the Store keeps the version: the manifest has none, the client header has its own", () => {
-  const pkg = JSON.parse(readFileSync(path.join(__dirname, "../../package.json"), "utf8"));
+  const pkg = JSON.parse(readFileSync(path.join(__dirname, "../../../package.json"), "utf8"));
   assert.equal(pkg.version, undefined);
   assert.match(EXTENSION_VERSION, /^\d+\.\d+\.\d+$/);
   assert.match(pkg.description, /Requires a KovaPDF account and API key\./);

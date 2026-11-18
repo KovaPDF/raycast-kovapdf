@@ -20,8 +20,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      # Tests first, on a fresh checkout: they compile only logic.ts, client.ts and the tests, so they need no generated files.
-      - run: npm test
+      # Tests first, on a fresh checkout: they live in dev/ (outside the Store copy), compile only logic.ts, client.ts and the tests, so they need no generated files.
+      - run: node dev/run-tests.mjs
       # ray build writes raycast-env.d.ts (the generated Preferences types), which typecheck reads.
       - run: npm run build
       - run: npm run typecheck

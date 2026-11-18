@@ -26,7 +26,7 @@ jobs:
         run: node -e "const d=require('./package.json').dependencies['@kovapdf/sdk']; if(!/^\d+\.\d+\.\d+$/.test(d)){console.error('Set @kovapdf/sdk to a published version first, not '+d);process.exit(1)}"
       # ray build also writes raycast-env.d.ts, which the tests read.
       - run: npx ray build -e dist -o dist -I
-      - run: npm test
+      - run: node dev/run-tests.mjs
       - run: npm run lint
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
