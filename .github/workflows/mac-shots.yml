@@ -25,10 +25,12 @@ jobs:
           system_profiler SPDisplaysDataType | grep -i -E 'resolution|display' || true
           mkdir -p shots
           screencapture -x shots/00-desktop.png || echo "screencapture failed"
+          brew install displayplacer || true
+          displayplacer list | head -40 || true
       - name: Install and open Raycast
         run: |
           brew install --cask raycast
-          open -a Raycast
+          open /Applications/Raycast.app || true
           sleep 25
           screencapture -x shots/01-after-open.png || true
           osascript -e 'tell application "System Events" to get name of every window of process "Raycast"' || true
