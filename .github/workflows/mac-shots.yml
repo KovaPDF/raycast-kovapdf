@@ -49,6 +49,24 @@ jobs:
           open "raycast://extensions/kovapdf/kovapdf/verify-signature" || true
           sleep 10
           screencapture -x shots/03-verify-deeplink.png || true
+      - name: Try real clicks (cliclick)
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          brew install cliclick || true
+          cliclick c:960,410 || echo 'click failed'
+          sleep 8
+          screencapture -x shots/04-after-open-command.png || true
+          cliclick kd:cmd t:k ku:cmd || true
+          sleep 3
+          screencapture -x shots/05-actions.png || true
+          cliclick kp:esc kp:esc || true
+          sleep 2
+          open 'raycast://extensions/kovapdf/kovapdf/compress-pdf' || true
+          sleep 6
+          cliclick c:960,410 || true
+          sleep 8
+          screencapture -x shots/06-compress.png || true
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
