@@ -28,13 +28,18 @@ jobs:
           brew install displayplacer || true
           displayplacer list | head -40 || true
       - name: Install and open Raycast
+        timeout-minutes: 8
+        continue-on-error: true
         run: |
           brew install --cask raycast
-          open /Applications/Raycast.app || true
+          (open /Applications/Raycast.app > open.log 2>&1 &) ; sleep 5; cat open.log || true
           sleep 25
           screencapture -x shots/01-after-open.png || true
-          osascript -e 'tell application "System Events" to get name of every window of process "Raycast"' || true
+          pgrep -fl Raycast || echo 'Raycast not running'
+          screencapture -x shots/01b-after-open.png || true
       - name: Load the extension in development mode
+        timeout-minutes: 6
+        continue-on-error: true
         run: |
           (npx ray develop > ray-develop.log 2>&1 &) ; sleep 60
           tail -40 ray-develop.log || true
