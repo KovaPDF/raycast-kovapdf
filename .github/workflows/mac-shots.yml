@@ -69,7 +69,10 @@ jobs:
           # walk through Raycast's first-run setup so it stops being the front app
           shot 09-setup-0
           cliclick c:1538,841; sleep 3; shot 09-setup-1
-          for i in 2 3 4 5 6 7 8 9 10; do cliclick kp:return; sleep 3; shot 09-setup-$i; done
+          cliclick kp:return; sleep 3; shot 09-setup-2
+          for i in 3 4 5 6 7 8 9 10; do cliclick c:1418,841; sleep 3; shot 09-setup-$i; done
+          # the window's own close button, once the setup allows it
+          cliclick c:318,84; sleep 3; shot 09-setup-closed
           cliclick kp:esc; sleep 2; shot 10-before
           # 1. Verify a signed PDF
           open -R "$D/Offer letter (signed).pdf"; sleep 3; open -a Finder; sleep 2; shot 11-finder-selected
