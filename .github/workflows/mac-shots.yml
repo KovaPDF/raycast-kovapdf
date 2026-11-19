@@ -58,7 +58,7 @@ jobs:
         run: |
           # On this runner Raycast cannot read the Finder selection, so the shot build reads the path from a file.
           for f in src/verify-signature.tsx src/compress-pdf.tsx src/merge-pdfs.tsx; do
-            perl -0pi -e 's/getSelectedFinderItems\(\)\.catch\(\(\) => \[\]\)/getSelectedFinderItems().catch(() => []).then((x) => (x.length ? x : require("node:fs").readFileSync("\/tmp\/kova-shot-file", "utf8").split("\n").filter(Boolean).map((p: string) => ({ path: p }))))/' "$f"
+            perl -0pi -e 's/getSelectedFinderItems\(\)\.catch\(\(\) => \[\]\)/getSelectedFinderItems().catch(() => []).then((x) => (x.length ? x : require("node:fs").readFileSync("\/tmp\/kova-shot-file", "utf8").split(String.fromCharCode(10)).filter(Boolean).map((p: string) => ({ path: p }))))/' "$f"
             grep -c kova-shot-file "$f"
           done
       - name: Load the extension in development mode
