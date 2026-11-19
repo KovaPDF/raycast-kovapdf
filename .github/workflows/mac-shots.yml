@@ -54,6 +54,13 @@ jobs:
           done
           sqlite3 "$U" "select service,client,auth_value,length(csreq) from access where client like '%raycast%';" || true
           killall tccd || true; sudo killall tccd || true
+      - name: Shots only, never in the Store code: read the demo file path when Finder gives no selection
+        run: |
+          # On this runner Raycast cannot read the Finder selection, so the shot build reads the path from a file.
+          for f in src/verify-signature.tsx src/compress-pdf.tsx src/merge-pdfs.tsx; do
+            perl -0pi -e 's/getSelectedFinderItems\(\)\.catch\(\(\) => \[\]\)/getSelectedFinderItems().catch(() => []).then((x) => (x.length ? x : require("node:fs").readFileSync("\/tmp\/kova-shot-file", "utf8").split("\n").filter(Boolean).map((p: string) => ({ path: p }))))/' "$f"
+            grep -c kova-shot-file "$f"
+          done
       - name: Load the extension in development mode
         timeout-minutes: 6
         continue-on-error: true
@@ -62,48 +69,42 @@ jobs:
           tail -20 ray-develop.log || true
           screencapture -x shots/02-after-develop.png || true
       - name: Real commands with the test key
-        timeout-minutes: 12
+        timeout-minutes: 14
         continue-on-error: true
         env:
           KEY: ${{ secrets.RAYCAST_SHOT_KEY }}
         run: |
           D="$HOME/Desktop/KovaPDF demo"; mkdir -p "$D"; cp .github/mac-shots/*.pdf "$D/"
-          touch /tmp/marker
           shot() { screencapture -x "shots/$1.png" || true; }
+          win() { mkdir -p shots/win; screencapture -x -R 585,163,750,475 "shots/win/$1.png" || true; }
           # walk through Raycast's first-run setup so it stops being the front app
           shot 09-setup-0
-          cliclick c:1538,841; sleep 3; shot 09-setup-1
-          cliclick kp:return; sleep 3; shot 09-setup-2
-          for i in 3 4 5 6 7 8 9 10; do cliclick c:1418,841; sleep 3; shot 09-setup-$i; done
-          # the window's own close button, once the setup allows it
+          cliclick c:1538,841; sleep 3
+          cliclick kp:return; sleep 3
+          for i in 3 4 5 6 7 8 9 10; do cliclick c:1418,841; sleep 3; done
           cliclick c:318,84; sleep 3; shot 09-setup-closed
-          cliclick kp:esc; sleep 2; shot 10-before
-          # 1. Verify a signed PDF
-          open -R "$D/Offer letter (signed).pdf"; sleep 3; open -a Finder; sleep 2; shot 11-finder-selected
+          cliclick kp:esc; sleep 2
+          # 1. Root search shows the four commands
+          open -a Raycast; sleep 3; cliclick "t:KovaPDF"; sleep 3; shot 30-root; win 1-root-search
+          cliclick kp:esc kp:esc; sleep 2
+          # 2. Verify a signed PDF (first run asks for the key)
+          echo "$D/Offer letter (signed).pdf" > /tmp/kova-shot-file
           open 'raycast://extensions/kovapdf/kovapdf/verify-signature'; sleep 5; shot 12-request
           cliclick c:960,410; sleep 6; shot 13-welcome
           cliclick c:960,440; sleep 1
           if [ -n "$KEY" ]; then cliclick "t:$KEY"; else echo 'no key secret'; fi
-          sleep 1; shot 14-key-typed
-          cliclick kd:cmd kp:return ku:cmd; sleep 15; shot 15-verify-result
-          open -a Finder; sleep 2; open 'raycast://extensions/kovapdf/kovapdf/verify-signature'; sleep 3; cliclick c:960,410; sleep 15; shot 15b-verify-result
-          screencapture -x -R 585,164,750,475 shots/15c-window-only.png || true
-          cliclick kd:cmd,shift,alt t:m ku:cmd,shift,alt; sleep 6; shot 16-window-capture
-          cliclick kp:return; sleep 4; shot 17-after-capture-enter
-          cliclick kp:esc kp:esc; sleep 2
-          # Window Capture from the root search
-          open -a Raycast; sleep 3; cliclick "t:Window Capture"; sleep 3; shot 18-root-search
-          cliclick kp:esc kp:esc; sleep 2
-          # 2. Compress a PDF
-          open -R "$D/Team memo.pdf"; sleep 3; open -a Finder; sleep 2
-          open 'raycast://extensions/kovapdf/kovapdf/compress-pdf'; sleep 5; shot 20-request
-          cliclick c:960,410; sleep 2; shot 21-compressing; sleep 10; shot 22-compressed
+          cliclick kd:cmd kp:return ku:cmd; sleep 15; shot 31-verify; win 2-verify-signed
+          cliclick kd:cmd t:k ku:cmd; sleep 2; shot 32-actions; win 3-verify-actions
+          cliclick kp:esc kp:esc kp:esc; sleep 2
+          # 3. Verify a PDF with no signature
+          echo "$D/Team memo.pdf" > /tmp/kova-shot-file
+          open 'raycast://extensions/kovapdf/kovapdf/verify-signature'; sleep 4; shot 33-request
+          cliclick c:960,410; sleep 12; shot 34-verify-unsigned; win 4-verify-unsigned
+          cliclick kp:esc kp:esc kp:esc; sleep 2
+          # 4. Compress a PDF
+          open 'raycast://extensions/kovapdf/kovapdf/compress-pdf'; sleep 4; shot 20-request
+          cliclick c:960,410; sleep 1; shot 21-compressing; sleep 10; shot 22-compressed
           ls -la "$D" || true
-          echo '--- new png files ---'
-          find "$HOME" -newer /tmp/marker -name '*.png' -not -path '*/Library/Caches/*' -not -path '*/work/*' 2>/dev/null | head -40
-          mkdir -p shots/capture
-          find "$HOME" -newer /tmp/marker -name '*.png' -not -path '*/Library/Caches/*' -not -path '*/work/*' 2>/dev/null | head -20 | while read -r f; do cp "$f" shots/capture/ || true; done
-          find . -path ./node_modules -prune -o -name 'metadata' -type d -print
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
