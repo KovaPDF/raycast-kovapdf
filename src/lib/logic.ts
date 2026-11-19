@@ -211,7 +211,7 @@ export function verifyMarkdown(fileName: string, report: Record<string, unknown>
     "`" +
     String(v ?? "")
       .replace(/`/g, "'")
-      .replace(/s+/g, " ")
+      .replace(/\s+/g, " ")
       .slice(0, 200) +
     "`";
   const obj = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});

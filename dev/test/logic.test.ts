@@ -217,6 +217,7 @@ test("verify markdown reads KovaPDF's report: signer, verdict, trust and time in
   assert.ok(!md.includes("{"), "no raw JSON in the report");
   assert.equal(md.split("kovapdf.com").length - 1, 2, "one link: text and address");
   assert.match(verifyMarkdown("x.pdf", { signatures: [{}] }), /Not named in the certificate/);
+  assert.ok(verifyMarkdown("Offer letter (signed).pdf", { signatures: [] }).includes("Offer letter (signed).pdf"), "file name kept letter for letter");
 });
 
 test("the Store keeps the version: the manifest has none, the client header has its own", () => {
