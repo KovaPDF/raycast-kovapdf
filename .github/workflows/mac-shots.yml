@@ -54,7 +54,7 @@ jobs:
           done
           sqlite3 "$U" "select service,client,auth_value,length(csreq) from access where client like '%raycast%';" || true
           killall tccd || true; sudo killall tccd || true
-      - name: Shots only, never in the Store code: read the demo file path when Finder gives no selection
+      - name: Shots only, never in the Store code - read the demo file path when Finder gives no selection
         run: |
           # On this runner Raycast cannot read the Finder selection, so the shot build reads the path from a file.
           for f in src/verify-signature.tsx src/compress-pdf.tsx src/merge-pdfs.tsx; do
