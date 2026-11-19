@@ -54,6 +54,19 @@ jobs:
           done
           sqlite3 "$U" "select service,client,auth_value,length(csreq) from access where client like '%raycast%';" || true
           killall tccd || true; sudo killall tccd || true
+      - name: Shape of the verify answer for the invented signed PDF (field names and short values)
+        continue-on-error: true
+        env:
+          KEY: ${{ secrets.RAYCAST_SHOT_KEY }}
+        run: |
+          cat > /tmp/shape.mjs <<'JS'
+          import { KovaPDF } from "@kovapdf/sdk";
+          const kova = new KovaPDF({ apiKey: process.env.KEY, client: { id: "raycast", name: "raycast", version: "0.0.0" } });
+          const r = await kova.verify(".github/mac-shots/Offer letter (signed).pdf");
+          const shape = (v, d = 0) => v === null ? null : Array.isArray(v) ? (d > 3 ? "[...]" : v.slice(0, 2).map((x) => shape(x, d + 1))) : typeof v === "object" ? (d > 3 ? "{...}" : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, shape(x, d + 1)]))) : typeof v === "string" ? v.slice(0, 40) : v;
+          console.log(JSON.stringify(shape(r), null, 1));
+          JS
+          cp /tmp/shape.mjs ./shape.mjs && node shape.mjs | head -150; rm -f shape.mjs
       - name: Shots only, never in the Store code - read the demo file path when Finder gives no selection
         run: |
           # On this runner Raycast cannot read the Finder selection, so the shot build reads the path from a file.
