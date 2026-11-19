@@ -66,8 +66,11 @@ jobs:
           D="$HOME/Desktop/KovaPDF demo"; mkdir -p "$D"; cp .github/mac-shots/*.pdf "$D/"
           touch /tmp/marker
           shot() { screencapture -x "shots/$1.png" || true; }
-          # close the Raycast welcome window, so Finder stays the front app
-          cliclick c:960,300; sleep 1; cliclick kd:cmd t:w ku:cmd; sleep 2; shot 10-before
+          # walk through Raycast's first-run setup so it stops being the front app
+          shot 09-setup-0
+          cliclick c:1538,841; sleep 3; shot 09-setup-1
+          for i in 2 3 4 5 6 7 8 9 10; do cliclick kp:return; sleep 3; shot 09-setup-$i; done
+          cliclick kp:esc; sleep 2; shot 10-before
           # 1. Verify a signed PDF
           open -R "$D/Offer letter (signed).pdf"; sleep 3; open -a Finder; sleep 2; shot 11-finder-selected
           open 'raycast://extensions/kovapdf/kovapdf/verify-signature'; sleep 5; shot 12-request
