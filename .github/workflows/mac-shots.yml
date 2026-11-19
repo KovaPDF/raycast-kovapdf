@@ -45,11 +45,16 @@ jobs:
           S="/Library/Application Support/com.apple.TCC/TCC.db"
           now=$(date +%s)
           COLS="service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier_type,indirect_object_identifier,flags,last_modified"
-          sqlite3 "$U" "INSERT OR REPLACE INTO access ($COLS) VALUES ('kTCCServiceAppleEvents','com.raycast.macos',0,2,3,1,0,'com.apple.finder',0,$now);" || echo 'user TCC failed'
+          creq() { codesign -d -r- "$1" 2>&1 | sed -n 's/^designated => //p' | csreq -r- -b /tmp/cr.bin && xxd -p /tmp/cr.bin | tr -d '
+'; }
+          RC=$(creq /Applications/Raycast.app); FC=$(creq /System/Library/CoreServices/Finder.app)
+          echo "csreq lengths: raycast ${#RC} finder ${#FC}"
+          sqlite3 "$U" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,csreq,indirect_object_identifier_type,indirect_object_identifier,indirect_object_code_identity,flags,last_modified) VALUES ('kTCCServiceAppleEvents','com.raycast.macos',0,2,3,1,X'$RC',0,'com.apple.finder',X'$FC',0,$now);" || echo 'user TCC failed'
           for svc in kTCCServiceAccessibility kTCCServiceScreenCapture kTCCServicePostEvent; do
             sudo sqlite3 "$S" "INSERT OR REPLACE INTO access ($COLS) VALUES ('$svc','com.raycast.macos',0,2,3,1,0,'UNUSED',0,$now);" || echo "system TCC $svc failed"
           done
-          sqlite3 "$U" "select service,client,auth_value from access where client like '%raycast%';" || true
+          sqlite3 "$U" "select service,client,auth_value,length(csreq) from access where client like '%raycast%';" || true
+          killall tccd || true; sudo killall tccd || true
       - name: Load the extension in development mode
         timeout-minutes: 6
         continue-on-error: true
