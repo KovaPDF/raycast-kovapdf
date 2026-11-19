@@ -1,10 +1,12 @@
 name: mac-shots
 
-# Experiment: can a GitHub macOS runner open Raycast and show our extension,
-# so the Store screenshots can come from a real Raycast window?
+# Store screenshots from a real Raycast window on a GitHub macOS runner.
+# Inputs are invented PDFs in .github/mac-shots. The test key comes from the
+# RAYCAST_SHOT_KEY secret and is typed into the password field only.
 on:
   push:
     branches: [mac-shots]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,7 +14,7 @@ permissions:
 jobs:
   shots:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -20,12 +22,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Screen size and permissions
+      - name: Screen
         run: |
-          system_profiler SPDisplaysDataType | grep -i -E 'resolution|display' || true
           mkdir -p shots
-          screencapture -x shots/00-desktop.png || echo "screencapture failed"
-          brew install displayplacer || true
+          brew install displayplacer cliclick || true
           displayplacer list | head -40 || true
       - name: Install and open Raycast
         timeout-minutes: 8
@@ -34,39 +34,61 @@ jobs:
           displayplacer "id:1 res:1920x1080 hz:60 color_depth:7 scaling:off origin:(0,0) degree:0" || true
           brew install --cask --no-quarantine raycast || brew install --cask raycast
           xattr -dr com.apple.quarantine /Applications/Raycast.app || true
-          (open /Applications/Raycast.app > open.log 2>&1 &) ; sleep 5; cat open.log || true
-          sleep 25
+          (open /Applications/Raycast.app > open.log 2>&1 &) ; sleep 30
           screencapture -x shots/01-after-open.png || true
           pgrep -fl Raycast || echo 'Raycast not running'
-          screencapture -x shots/01b-after-open.png || true
+      - name: Allow Raycast to read the Finder selection and the screen (runner only)
+        timeout-minutes: 2
+        continue-on-error: true
+        run: |
+          U="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
+          S="/Library/Application Support/com.apple.TCC/TCC.db"
+          now=$(date +%s)
+          COLS="service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier_type,indirect_object_identifier,flags,last_modified"
+          sqlite3 "$U" "INSERT OR REPLACE INTO access ($COLS) VALUES ('kTCCServiceAppleEvents','com.raycast.macos',0,2,3,1,0,'com.apple.finder',0,$now);" || echo 'user TCC failed'
+          for svc in kTCCServiceAccessibility kTCCServiceScreenCapture kTCCServicePostEvent; do
+            sudo sqlite3 "$S" "INSERT OR REPLACE INTO access ($COLS) VALUES ('$svc','com.raycast.macos',0,2,3,1,0,'UNUSED',0,$now);" || echo "system TCC $svc failed"
+          done
+          sqlite3 "$U" "select service,client,auth_value from access where client like '%raycast%';" || true
       - name: Load the extension in development mode
         timeout-minutes: 6
         continue-on-error: true
         run: |
           (npx ray develop > ray-develop.log 2>&1 &) ; sleep 60
-          tail -40 ray-develop.log || true
+          tail -20 ray-develop.log || true
           screencapture -x shots/02-after-develop.png || true
-          open "raycast://extensions/kovapdf/kovapdf/verify-signature" || true
-          sleep 10
-          screencapture -x shots/03-verify-deeplink.png || true
-      - name: Try real clicks (cliclick)
-        timeout-minutes: 5
+      - name: Real commands with the test key
+        timeout-minutes: 12
         continue-on-error: true
+        env:
+          KEY: ${{ secrets.RAYCAST_SHOT_KEY }}
         run: |
-          brew install cliclick || true
-          cliclick c:960,410 || echo 'click failed'
-          sleep 8
-          screencapture -x shots/04-after-open-command.png || true
-          cliclick kd:cmd t:k ku:cmd || true
-          sleep 3
-          screencapture -x shots/05-actions.png || true
-          cliclick kp:esc kp:esc || true
-          sleep 2
-          open 'raycast://extensions/kovapdf/kovapdf/compress-pdf' || true
-          sleep 6
-          cliclick c:960,410 || true
-          sleep 8
-          screencapture -x shots/06-compress.png || true
+          D="$HOME/Desktop/KovaPDF demo"; mkdir -p "$D"; cp .github/mac-shots/*.pdf "$D/"
+          touch /tmp/marker
+          shot() { screencapture -x "shots/$1.png" || true; }
+          cliclick kp:esc || true; sleep 2; shot 10-before
+          # 1. Verify a signed PDF
+          open -R "$D/Offer letter (signed).pdf"; sleep 4; shot 11-finder-selected
+          open 'raycast://extensions/kovapdf/kovapdf/verify-signature'; sleep 5; shot 12-request
+          cliclick c:960,410; sleep 6; shot 13-welcome
+          cliclick c:960,440; sleep 1
+          if [ -n "$KEY" ]; then cliclick "t:$KEY"; else echo 'no key secret'; fi
+          sleep 1; shot 14-key-typed
+          cliclick kd:cmd kp:return ku:cmd; sleep 15; shot 15-verify-result
+          sleep 10; shot 15b-verify-result
+          cliclick kd:cmd,shift,alt t:m ku:cmd,shift,alt; sleep 6; shot 16-window-capture
+          cliclick kp:return; sleep 4; shot 17-after-capture-enter
+          cliclick kp:esc kp:esc; sleep 2
+          # 2. Compress a PDF
+          open -R "$D/Team memo.pdf"; sleep 4
+          open 'raycast://extensions/kovapdf/kovapdf/compress-pdf'; sleep 5; shot 20-request
+          cliclick c:960,410; sleep 2; shot 21-compressing; sleep 10; shot 22-compressed
+          ls -la "$D" || true
+          echo '--- new png files ---'
+          find "$HOME" -newer /tmp/marker -name '*.png' -not -path '*/Library/Caches/*' -not -path '*/work/*' 2>/dev/null | head -40
+          mkdir -p shots/capture
+          find "$HOME" -newer /tmp/marker -name '*.png' -not -path '*/Library/Caches/*' -not -path '*/work/*' 2>/dev/null | head -20 | while read -r f; do cp "$f" shots/capture/ || true; done
+          find . -path ./node_modules -prune -o -name 'metadata' -type d -print
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
@@ -74,4 +96,5 @@ jobs:
           path: |
             shots/
             ray-develop.log
+            metadata/
           retention-days: 3
