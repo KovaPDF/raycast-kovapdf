@@ -188,6 +188,37 @@ test("verify markdown shows file text as data", () => {
   assert.match(verifyMarkdown("x.pdf", { signatures: [] }), /No digital signatures/);
 });
 
+test("verify markdown reads KovaPDF's report: signer, verdict, trust and time in plain words, no raw JSON", () => {
+  const md = verifyMarkdown("offer.pdf", {
+    signatures: [
+      {
+        certificateDetails: { commonName: "Nadia Rahman", issuerCommonName: "Nadia Rahman" },
+        verdict: "UNCHANGED",
+        status: { signature: "VALID", trust: "NOT_TRUSTED", trustedBy: [] },
+        signingTime: "2026-11-19T04:00:44.000Z",
+        timestamp: { present: false },
+      },
+      {
+        certificateDetails: { organization: "Northwind Studio" },
+        verdict: "CHANGED",
+        status: { signature: "VALID", trust: "TRUSTED", trustedBy: ["eutl", "aatl"] },
+        timestamp: { present: true, valid: true, genTime: "2026-01-02T09:05:00Z" },
+      },
+    ],
+  });
+  assert.match(md, /2 signatures found/);
+  assert.ok(md.includes("**Signer:** `Nadia Rahman`"));
+  assert.match(md, /Not changed since it was signed/);
+  assert.match(md, /Not issued by a trusted certificate authority/);
+  assert.ok(md.includes("19 Nov 2026, 04:00 UTC (signer's clock)"));
+  assert.match(md, /Changed after it was signed/);
+  assert.ok(md.includes("Trusted (EU trusted lists, Adobe AATL)"));
+  assert.ok(md.includes("2 Jan 2026, 09:05 UTC (trusted timestamp)"));
+  assert.ok(!md.includes("{"), "no raw JSON in the report");
+  assert.equal(md.split("kovapdf.com").length - 1, 2, "one link: text and address");
+  assert.match(verifyMarkdown("x.pdf", { signatures: [{}] }), /Not named in the certificate/);
+});
+
 test("the Store keeps the version: the manifest has none, the client header has its own", () => {
   const pkg = JSON.parse(readFileSync(path.join(__dirname, "../../../package.json"), "utf8"));
   assert.equal(pkg.version, undefined);
