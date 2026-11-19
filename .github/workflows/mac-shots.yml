@@ -66,21 +66,26 @@ jobs:
           D="$HOME/Desktop/KovaPDF demo"; mkdir -p "$D"; cp .github/mac-shots/*.pdf "$D/"
           touch /tmp/marker
           shot() { screencapture -x "shots/$1.png" || true; }
-          cliclick kp:esc || true; sleep 2; shot 10-before
+          # close the Raycast welcome window, so Finder stays the front app
+          cliclick c:960,300; sleep 1; cliclick kd:cmd t:w ku:cmd; sleep 2; shot 10-before
           # 1. Verify a signed PDF
-          open -R "$D/Offer letter (signed).pdf"; sleep 4; shot 11-finder-selected
+          open -R "$D/Offer letter (signed).pdf"; sleep 3; open -a Finder; sleep 2; shot 11-finder-selected
           open 'raycast://extensions/kovapdf/kovapdf/verify-signature'; sleep 5; shot 12-request
           cliclick c:960,410; sleep 6; shot 13-welcome
           cliclick c:960,440; sleep 1
           if [ -n "$KEY" ]; then cliclick "t:$KEY"; else echo 'no key secret'; fi
           sleep 1; shot 14-key-typed
           cliclick kd:cmd kp:return ku:cmd; sleep 15; shot 15-verify-result
-          sleep 10; shot 15b-verify-result
+          open -a Finder; sleep 2; open 'raycast://extensions/kovapdf/kovapdf/verify-signature'; sleep 3; cliclick c:960,410; sleep 15; shot 15b-verify-result
+          screencapture -x -R 585,164,750,475 shots/15c-window-only.png || true
           cliclick kd:cmd,shift,alt t:m ku:cmd,shift,alt; sleep 6; shot 16-window-capture
           cliclick kp:return; sleep 4; shot 17-after-capture-enter
           cliclick kp:esc kp:esc; sleep 2
+          # Window Capture from the root search
+          open -a Raycast; sleep 3; cliclick "t:Window Capture"; sleep 3; shot 18-root-search
+          cliclick kp:esc kp:esc; sleep 2
           # 2. Compress a PDF
-          open -R "$D/Team memo.pdf"; sleep 4
+          open -R "$D/Team memo.pdf"; sleep 3; open -a Finder; sleep 2
           open 'raycast://extensions/kovapdf/kovapdf/compress-pdf'; sleep 5; shot 20-request
           cliclick c:960,410; sleep 2; shot 21-compressing; sleep 10; shot 22-compressed
           ls -la "$D" || true
